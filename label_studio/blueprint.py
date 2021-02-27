@@ -75,7 +75,7 @@ def config_from_file():
     try:
         config_file = INPUT_ARGUMENTS_PATH.open(encoding='utf8')
     except OSError:
-        raise LabelStudioError("Can't open input_args file: " + str(INPUT_ARGUMENTS_PATH) + ", " 
+        raise LabelStudioError("Can't open input_args file: " + str(INPUT_ARGUMENTS_PATH) + ", "
                                "use set_input_arguments_path() to setup it")
 
     with config_file:
@@ -126,6 +126,8 @@ def create_app(label_studio_config=None):
     :param label_studio_config: LabelStudioConfig object to use with input_args params
     """
     app = flask.Flask(__package__, static_url_path='')
+    from flask_reverse_proxy_fix.middleware import ReverseProxyPrefixFix
+    app.config['REVERSE_PROXY_PATH'] = '/labelstudio'
     app.secret_key = 'A0Zrdqwf1AQWj12ajkhgFN]dddd/,?RfDWQQT'
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     app.config['WTF_CSRF_ENABLED'] = False
@@ -1011,7 +1013,7 @@ def main():
                 port = int(port) + 1
                 if port - original_port >= 1000:
                     raise ConnectionError(
-                        '\n*** WARNING! ***\n Could not find an available port\n' + 
+                        '\n*** WARNING! ***\n Could not find an available port\n' +
                         ' to launch label studio. \n Last tested port was ' + str(port) +
                         '\n****************\n')
                 print('\n*** WARNING! ***\n* Port ' + str(old_port) + ' is in use.\n' +

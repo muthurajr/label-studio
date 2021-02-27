@@ -172,7 +172,7 @@ class CloudStorage(BaseStorage):
 
     def __init__(
         self, prefix=None, regex=None, create_local_copy=True, use_blob_urls=True, data_key=None,
-        sync_in_thread=True, presign=True, **kwargs
+        sync_in_thread=True, presign=True, consider_new_objects=True, **kwargs
     ):
         super(CloudStorage, self).__init__(**kwargs)
         self.prefix = prefix or ''
@@ -189,6 +189,7 @@ class CloudStorage(BaseStorage):
         self.data_key = data_key or Settings.UPLOAD_DATA_UNDEFINED_NAME
         self.sync_in_thread = sync_in_thread
         self.presign = presign
+        self.consider_new_objects = consider_new_objects
 
         self.client = self._get_client()
         self.validate_connection()
@@ -436,10 +437,11 @@ class CloudStorage(BaseStorage):
             exclusion = full - intersect
 
             # new tasks
-            for key in exclusion:
-                id, new_id = self._get_new_id(key, new_id)
-                new_ids_keys_map[id] = {'key': key, 'exists': True}
-                new_keys_ids_map[key] = id
+            if self.consider_new_objects:
+                for key in exclusion:
+                    id, new_id = self._get_new_id(key, new_id)
+                    new_ids_keys_map[id] = {'key': key, 'exists': True}
+                    new_keys_ids_map[key] = id
 
             # old existed tasks
             for key in intersect:
