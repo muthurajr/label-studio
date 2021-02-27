@@ -128,6 +128,7 @@ def create_app(label_studio_config=None):
     app = flask.Flask(__package__, static_url_path='')
     from flask_reverse_proxy_fix.middleware import ReverseProxyPrefixFix
     app.config['REVERSE_PROXY_PATH'] = '/labelstudio'
+    ReverseProxyPrefixFix(app)
     app.secret_key = 'A0Zrdqwf1AQWj12ajkhgFN]dddd/,?RfDWQQT'
     app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     app.config['WTF_CSRF_ENABLED'] = False
