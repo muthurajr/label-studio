@@ -137,7 +137,10 @@ def gs_kubernetes_get_signed_url(bucket_name, blob_name):
     data_bucket = storage_client.lookup_bucket(bucket_name)
     signed_blob_path = data_bucket.blob(blob_name)
     expires_at_ms = datetime.now() + timedelta(minutes=PRESIGNED_URL_TTL_MINUTES)
-    signed_url = signed_blob_path.generate_signed_url(expires_at_ms, credentials=credentials, version="v4")
+    signed_url = signed_blob_path.generate_signed_url(expires_at_ms,
+                                                      credentials=credentials,
+                                                      version="v4",
+                                                      service_account_email=credentials.service_account_email)
     return signed_url
 
 
