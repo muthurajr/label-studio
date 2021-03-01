@@ -19,8 +19,8 @@ from label_studio.storage.s3 import get_client_and_resource
 logger = logging.getLogger(__name__)
 
 PRESIGNED_URL_TTL_MINUTES = 1
-AZURE_BLOB_ACCOUNT_NAME = os.getenv('AZURE_BLOB_ACCOUNT_NAME') 
-AZURE_BLOB_ACCOUNT_KEY = os.getenv('AZURE_BLOB_ACCOUNT_KEY') 
+AZURE_BLOB_ACCOUNT_NAME = os.getenv('AZURE_BLOB_ACCOUNT_NAME')
+AZURE_BLOB_ACCOUNT_KEY = os.getenv('AZURE_BLOB_ACCOUNT_KEY')
 
 
 def resolve_task_data_uri(task, **kwargs):
@@ -120,12 +120,25 @@ def resolve_gs(url, **kwargs):
     r = urlparse(url, allow_fragments=False)
     bucket_name = r.netloc
     key = r.path.lstrip('/')
-    if is_gce_instance():
-        logger.debug('Generate signed URL for GCE instance')
-        return python_cloud_function_get_signed_url(bucket_name, key)
-    else:
-        logger.debug('Generate signed URL for local instance')
-        return generate_download_signed_url_v4(bucket_name, key)
+    return gs_kubernetes_get_signed_url(bucket_name, key)
+    #if is_gce_instance():
+        #logger.debug('Generate signed URL for GCE instance')
+        #return python_cloud_function_get_signed_url(bucket_name, key)
+    #else:
+        #logger.debug('Generate signed URL for local instance')
+        #return generate_download_signed_url_v4(bucket_name, key)
+
+
+def gs_kubernetes_get_signed_url(bucket_name, blob_name):
+    auth_request = requests.Request()
+    credentials, project = google.auth.default()
+    credentials.refresh(auth_request)
+    storage_client = gs.Client(project, credentials)
+    data_bucket = storage_client.lookup_bucket(bucket_name)
+    signed_blob_path = data_bucket.blob(blob_name)
+    expires_at_ms = datetime.now() + timedelta(minutes=PRESIGNED_URL_TTL_MINUTES)
+    signed_url = signed_blob_path.generate_signed_url(expires_at_ms, credentials=credentials, version="v4")
+    return signed_url
 
 
 def is_gce_instance():
@@ -185,18 +198,18 @@ def python_cloud_function_get_signed_url(bucket_name, blob_name):
 
 
 def resolve_azure_blob(url, **kwargs):
-    r = urlparse(url, allow_fragments=False) 
-         
+    r = urlparse(url, allow_fragments=False)
+
     container = r.netloc
     blob = r.path.lstrip('/')
 
     expiry= datetime.utcnow() + timedelta(minutes=PRESIGNED_URL_TTL_MINUTES)
 
-    sas_token = generate_blob_sas(account_name=AZURE_BLOB_ACCOUNT_NAME, 
+    sas_token = generate_blob_sas(account_name=AZURE_BLOB_ACCOUNT_NAME,
                                 container_name=container,
                                 blob_name=blob,
                                 account_key=AZURE_BLOB_ACCOUNT_KEY,
                                 permission=BlobSasPermissions(read=True),
-                                expiry=expiry) 
+                                expiry=expiry)
 
     return 'https://' + AZURE_BLOB_ACCOUNT_NAME + '.blob.core.windows.net/' + container + '/' + blob + '?' + sas_token
